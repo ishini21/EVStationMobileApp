@@ -1,47 +1,34 @@
 package com.example.evstationmobileapp
 
+import com.example.evstationmobileapp.R
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.evstationmobileapp.ui.theme.EVStationMobileAppTheme
+import android.view.View
+import android.widget.LinearLayout
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
+class MainActivity : AppCompatActivity() {
+    private var navHome: LinearLayout? = null
+    private var navStations: LinearLayout? = null
+    private var navBookings: LinearLayout? = null
+    private var navProfile: LinearLayout? = null
+
+    protected override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            EVStationMobileAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
-        }
-    }
-}
+        setContentView(R.layout.dashboard)
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+        // Initialize navigation items
+        navHome = findViewById(R.id.navHome)
+        navStations = findViewById(R.id.navStations)
+        navBookings = findViewById(R.id.navBookings)
+        navProfile = findViewById(R.id.navProfile)
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    EVStationMobileAppTheme {
-        Greeting("Android")
+        // Set click listeners
+        navHome!!.setOnClickListener(View.OnClickListener { v: View? -> })
+
+        navStations!!.setOnClickListener(View.OnClickListener { v: View? -> })
+
+        navBookings!!.setOnClickListener(View.OnClickListener { v: View? -> })
+
+        navProfile!!.setOnClickListener(View.OnClickListener { v: View? -> })
     }
 }
