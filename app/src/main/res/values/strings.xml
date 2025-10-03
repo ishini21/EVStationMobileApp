@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">EVStationMobileApp</string>
+    <string name="app_name">EV Charge</string>
+    <string name="app_logo">EV Charging App Logo</string>
 </resources>
