@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.example.evstationmobileapp.activities.BookingsActivity
+import com.example.evstationmobileapp.activities.StationsActivity
 
 class MainActivity : AppCompatActivity() {
     private var navHome: LinearLayout? = null
@@ -29,7 +30,10 @@ class MainActivity : AppCompatActivity() {
             setContentView(R.layout.dashboard)
         }
 
-        navStations!!.setOnClickListener(View.OnClickListener { v: View? -> })
+        navStations!!.setOnClickListener{
+            val intent = Intent(this, StationsActivity::class.java)
+            startActivity(intent)
+        }
 
 
         navBookings?.setOnClickListener {
