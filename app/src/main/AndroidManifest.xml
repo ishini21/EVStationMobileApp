@@ -44,6 +44,11 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <!--Station paage-->
+        <activity
+            android:name=".activities.StationDetailsActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

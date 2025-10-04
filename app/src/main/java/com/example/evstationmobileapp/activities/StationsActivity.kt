@@ -1,5 +1,6 @@
 package com.example.evstationmobileapp.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -117,6 +118,17 @@ class StationsActivity : AppCompatActivity() {
     }
 
     private fun onStationClicked(station: ChargingStation) {
-        // Handle station click - navigate to details, etc.
+        // Navigate to station details
+        val intent = Intent(this, StationDetailsActivity::class.java).apply {
+            putExtra("STATION_ID", station.id)
+            putExtra("STATION_NAME", station.name)
+            putExtra("STATION_LOCATION", station.location)
+            putExtra("AVAILABLE_SLOTS", station.availableSlots)
+            putExtra("TOTAL_SLOTS", station.totalSlots)
+            putExtra("OPERATING_HOURS", station.operatingHours)
+            putExtra("PRICE_PER_KWH", station.pricePerKwh)
+            putExtra("IS_24_HOURS", station.is24Hours)
+        }
+        startActivity(intent)
     }
 }
