@@ -49,6 +49,11 @@
             android:name=".activities.StationDetailsActivity"
             android:exported="false" />
 
+        <!--New Reservation-->
+        <activity
+            android:name=".activities.NewReservationActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

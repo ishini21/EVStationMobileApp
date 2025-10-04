@@ -108,7 +108,17 @@ class StationDetailsActivity : AppCompatActivity() {
     }
 
     private fun bookStation() {
-        // Navigate to booking page or show booking dialog
-        // You can implement your booking logic here
+        // Navigate to new reservation page
+        val intent = Intent(this, NewReservationActivity::class.java).apply {
+            putExtra("STATION_ID", station.id)
+            putExtra("STATION_NAME", station.name)
+            putExtra("STATION_LOCATION", station.location)
+            putExtra("AVAILABLE_SLOTS", station.availableSlots)
+            putExtra("TOTAL_SLOTS", station.totalSlots)
+            putExtra("OPERATING_HOURS", station.operatingHours)
+            putExtra("PRICE_PER_KWH", station.pricePerKwh)
+            putExtra("IS_24_HOURS", station.is24Hours)
+        }
+        startActivity(intent)
     }
 }

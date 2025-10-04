@@ -47,8 +47,8 @@ class StationsActivity : AppCompatActivity() {
         return listOf(
             ChargingStation(
                 id = 1,
-                name = "Station Name",
-                location = "Station Location",
+                name = "KeellsEv",
+                location = "Kadawatha",
                 availableSlots = 5,
                 totalSlots = 8,
                 operatingHours = "24/7",
@@ -57,8 +57,8 @@ class StationsActivity : AppCompatActivity() {
             ),
             ChargingStation(
                 id = 2,
-                name = "Station Name",
-                location = "Station Location",
+                name = "Laugh Station",
+                location = "rahama",
                 availableSlots = 5,
                 totalSlots = 8,
                 operatingHours = "6 AM - 10 PM",
