@@ -8,21 +8,41 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.EVStationMobileApp">
+
+        <!-- Splash Activity as launcher -->
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.SplashActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.EVStationMobileApp">
+            android:theme="@style/SplashTheme"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activities.BookingsActivity"/>
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.EVStationMobileApp" />
+
+        <!-- Bookings Activity -->
+        <activity
+            android:name=".activities.BookingsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <!-- Stations Activity -->
+        <activity
+            android:name=".activities.StationsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
     </application>
 
