@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.example.evstationmobileapp.activities.BookingsActivity
+import com.example.evstationmobileapp.activities.ProfileActivity
 import com.example.evstationmobileapp.activities.StationsActivity
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +42,9 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        navProfile!!.setOnClickListener(View.OnClickListener { v: View? -> })
+        navProfile?.setOnClickListener {
+            val intent = Intent(this, ProfileActivity::class.java)
+            startActivity(intent)
+        }
     }
 }
