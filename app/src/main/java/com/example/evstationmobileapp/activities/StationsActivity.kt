@@ -1,5 +1,6 @@
 package com.example.evstationmobileapp.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -46,8 +47,8 @@ class StationsActivity : AppCompatActivity() {
         return listOf(
             ChargingStation(
                 id = 1,
-                name = "Station Name",
-                location = "Station Location",
+                name = "KeellsEv",
+                location = "Kadawatha",
                 availableSlots = 5,
                 totalSlots = 8,
                 operatingHours = "24/7",
@@ -56,8 +57,8 @@ class StationsActivity : AppCompatActivity() {
             ),
             ChargingStation(
                 id = 2,
-                name = "Station Name",
-                location = "Station Location",
+                name = "Laugh Station",
+                location = "rahama",
                 availableSlots = 5,
                 totalSlots = 8,
                 operatingHours = "6 AM - 10 PM",
@@ -117,6 +118,17 @@ class StationsActivity : AppCompatActivity() {
     }
 
     private fun onStationClicked(station: ChargingStation) {
-        // Handle station click - navigate to details, etc.
+        // Navigate to station details
+        val intent = Intent(this, StationDetailsActivity::class.java).apply {
+            putExtra("STATION_ID", station.id)
+            putExtra("STATION_NAME", station.name)
+            putExtra("STATION_LOCATION", station.location)
+            putExtra("AVAILABLE_SLOTS", station.availableSlots)
+            putExtra("TOTAL_SLOTS", station.totalSlots)
+            putExtra("OPERATING_HOURS", station.operatingHours)
+            putExtra("PRICE_PER_KWH", station.pricePerKwh)
+            putExtra("IS_24_HOURS", station.is24Hours)
+        }
+        startActivity(intent)
     }
 }
