@@ -1,6 +1,7 @@
 package com.example.evstationmobileapp.remote
 
 import com.example.evstationmobileapp.models.BookingRequest
+import com.example.evstationmobileapp.models.BookingResponse
 import com.example.evstationmobileapp.models.ChargingStation
 import com.example.evstationmobileapp.models.Slot
 import okhttp3.ResponseBody
@@ -31,6 +32,18 @@ interface ApiService {
     suspend fun createBooking(
         @Header("Authorization") token: String,
         @Body bookingRequest: BookingRequest
+    ): Response<ResponseBody>
+
+    @GET("/api/Bookings")
+    suspend fun getBookingsByNic(
+        @Header("Authorization") token: String,
+        @Query("CustomerNic") customerNic: String
+    ): Response<BookingResponse>
+
+    @POST("/api/Bookings/{id}/cancel")
+    suspend fun cancelBooking(
+        @Header("Authorization") token: String,
+        @Path("id") bookingId: String
     ): Response<ResponseBody>
 
 }

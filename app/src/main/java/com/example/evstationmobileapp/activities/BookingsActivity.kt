@@ -1,118 +1,130 @@
 package com.example.evstationmobileapp.activities
 
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.evstationmobileapp.R
 import com.example.evstationmobileapp.adapters.BookingAdapter
 import com.example.evstationmobileapp.models.Booking
-import com.example.evstationmobileapp.models.BookingStatus
+import com.example.evstationmobileapp.remote.ApiClient
+import com.example.evstationmobileapp.utils.SessionManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.O)
 class BookingsActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var bookingAdapter: BookingAdapter
     private lateinit var fabAddBooking: FloatingActionButton
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.my_bookings)
 
-        // Initialize views first
         initializeViews()
-
-        // Setup RecyclerView with data
         setupRecyclerView()
-
-        // Setup FAB
         setupFAB()
+
+        fetchUserBookings()
     }
 
     private fun initializeViews() {
         recyclerView = findViewById(R.id.recyclerViewBookings)
         fabAddBooking = findViewById(R.id.fabAddBooking)
-
-        Log.d("BookingsActivity", "Views initialized")
+        sessionManager = SessionManager(this)
     }
 
     private fun setupRecyclerView() {
-        // Sample data - Replace with your backend data
-        val sampleBookings = listOf(
-            Booking(
-                id = "1",
-                stationName = "Keels EV",
-                location = "Kandana",
-                date = "01/01/2025",
-                time = "2.00 Pm",
-                status = BookingStatus.PENDING
-            ),
-            Booking(
-                id = "2",
-                stationName = "Keels EV",
-                location = "Kandana",
-                date = "01/01/2025",
-                time = "2.00 Pm",
-                status = BookingStatus.COMPLETED
-            ),
-            Booking(
-                id = "3",
-                stationName = "Keels EV",
-                location = "Kandana",
-                date = "01/01/2025",
-                time = "2.00 Pm",
-                status = BookingStatus.PENDING
-            ),
-            Booking(
-                id = "4",
-                stationName = "Keels EV",
-                location = "Kandana",
-                date = "01/01/2025",
-                time = "2.00 Pm",
-                status = BookingStatus.ONGOING
-            ),
-            Booking(
-                id = "5",
-                stationName = "Keels EV",
-                location = "Kandana",
-                date = "02/01/2025",
-                time = "3.00 Pm",
-                status = BookingStatus.CANCELED
-            )
-        )
-
-        Log.d("BookingsActivity", "Sample bookings created: ${sampleBookings.size} items")
-
-        // Create adapter
         bookingAdapter = BookingAdapter(
-            bookings = sampleBookings,
+            bookings = emptyList(),
             onViewQRClick = { booking ->
                 Toast.makeText(this, "View QR for ${booking.stationName}", Toast.LENGTH_SHORT).show()
+                // TODO: Navigate to a QR code display activity
             },
             onCancelClick = { booking ->
-                Toast.makeText(this, "Cancel booking for ${booking.stationName}", Toast.LENGTH_SHORT).show()
+                showCancelConfirmationDialog(booking)
             }
         )
 
-        Log.d("BookingsActivity", "Adapter created with ${bookingAdapter.itemCount} items")
-
-        // Setup RecyclerView
         recyclerView.apply {
             setHasFixedSize(true)
             layoutManager = LinearLayoutManager(this@BookingsActivity)
             adapter = bookingAdapter
         }
+    }
 
-        Log.d("BookingsActivity", "RecyclerView setup complete")
+    private fun fetchUserBookings() {
+        val token = sessionManager.fetchAuthToken()
+        val userNic = sessionManager.fetchUserIdentifier()
+
+        if (token.isNullOrEmpty() || userNic.isNullOrEmpty()) {
+            Toast.makeText(this, "Authentication error. Please log in.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.getBookingsByNic("Bearer $token", userNic)
+                if (response.isSuccessful && response.body() != null) {
+                    bookingAdapter.updateBookings(response.body()!!.bookings)
+                } else {
+                    Toast.makeText(this@BookingsActivity, "Failed to load bookings: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@BookingsActivity, "Network Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showCancelConfirmationDialog(booking: Booking) {
+        AlertDialog.Builder(this)
+            .setTitle("Cancel Booking")
+            .setMessage("Are you sure you want to cancel your booking at ${booking.stationName}?")
+            .setPositiveButton("Yes, Cancel") { _, _ ->
+                performCancelBooking(booking.id)
+            }
+            .setNegativeButton("No", null)
+            .show()
+    }
+
+    private fun performCancelBooking(bookingId: String) {
+        val token = sessionManager.fetchAuthToken()
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Authentication error.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.cancelBooking("Bearer $token", bookingId)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@BookingsActivity, "Booking cancelled successfully.", Toast.LENGTH_SHORT).show()
+                    // Refresh the list to show the updated status
+                    fetchUserBookings()
+                } else {
+                    Toast.makeText(this@BookingsActivity, "Failed to cancel booking: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@BookingsActivity, "Network Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupFAB() {
         fabAddBooking.setOnClickListener {
-            Toast.makeText(this, "Add new booking", Toast.LENGTH_SHORT).show()
-            // TODO: Navigate to add booking screen
+            // Navigate to the stations list to start a new booking
+            val intent = Intent(this, StationsActivity::class.java)
+            startActivity(intent)
         }
     }
 }
+

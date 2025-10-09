@@ -33,3 +33,6 @@ data class BookingRequest(
     @SerializedName("notes")
     val notes: String
 )
+
+
+

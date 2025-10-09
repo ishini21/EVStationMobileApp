@@ -1,21 +1,23 @@
 package com.example.evstationmobileapp.adapters
 
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.cardview.widget.CardView
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.evstationmobileapp.R
 import com.example.evstationmobileapp.models.Booking
-import com.example.evstationmobileapp.models.BookingStatus
+import com.google.android.material.button.MaterialButton
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class BookingAdapter(
-    private val bookings: List<Booking>,
+    private var bookings: List<Booking>,
     private val onViewQRClick: (Booking) -> Unit,
     private val onCancelClick: (Booking) -> Unit
 ) : RecyclerView.Adapter<BookingAdapter.BookingViewHolder>() {
@@ -27,47 +29,58 @@ class BookingAdapter(
         val tvDate: TextView = itemView.findViewById(R.id.tvDate)
         val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         val layoutButtons: LinearLayout = itemView.findViewById(R.id.layoutButtons)
-        val btnViewQR: Button = itemView.findViewById(R.id.btnViewQR)
-        val btnCancel: Button = itemView.findViewById(R.id.btnCancel)
+        val btnViewQR: MaterialButton = itemView.findViewById(R.id.btnViewQR)
+        val btnCancel: MaterialButton = itemView.findViewById(R.id.btnCancel)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookingViewHolder {
+        // Ensure you are using the correct layout file name here
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_booking_card, parent, false)
         return BookingViewHolder(view)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onBindViewHolder(holder: BookingViewHolder, position: Int) {
         val booking = bookings[position]
 
         holder.tvStationName.text = booking.stationName
-        holder.tvLocation.text = booking.location
-        holder.tvDate.text = booking.date
-        holder.tvTime.text = booking.time
+        holder.tvStatus.text = booking.status
+        // The API's booking object doesn't include location, so we hide this view
+        holder.tvLocation.visibility = View.GONE
 
-        // Set status text and background
-        when (booking.status) {
-            BookingStatus.PENDING -> {
-                holder.tvStatus.text = "Pending"
-                holder.tvStatus.setBackgroundResource(R.drawable.bg_status_pending)
-                holder.layoutButtons.visibility = View.VISIBLE
-            }
-            BookingStatus.COMPLETED -> {
-                holder.tvStatus.text = "Completed"
-                holder.tvStatus.setBackgroundResource(R.drawable.bg_status_completed)
-                holder.layoutButtons.visibility = View.GONE
-            }
-            BookingStatus.ONGOING -> {
-                holder.tvStatus.text = "Ongoing"
-                holder.tvStatus.setBackgroundResource(R.drawable.bg_status_ongoing)
-                holder.layoutButtons.visibility = View.VISIBLE
-            }
-            BookingStatus.CANCELED -> {
-                holder.tvStatus.text = "Canceled"
-                holder.tvStatus.setBackgroundResource(R.drawable.bg_status_canceled)
-                holder.layoutButtons.visibility = View.GONE
-            }
+        // Parse the ISO 8601 date string from the API
+        try {
+            val zonedDateTime = ZonedDateTime.parse(booking.reservationStartTime)
+            val dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.getDefault())
+            val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
+            holder.tvDate.text = zonedDateTime.format(dateFormatter)
+            holder.tvTime.text = zonedDateTime.format(timeFormatter)
+        } catch (e: Exception) {
+            holder.tvDate.text = "Invalid Date"
+            holder.tvTime.text = ""
         }
+
+        // Set status text and background based on the string from the API
+        val statusDrawableRes = when (booking.status.lowercase(Locale.ROOT)) {
+            "confirmed" -> R.drawable.bg_status_confirmed
+            "completed" -> R.drawable.bg_status_completed
+            "cancelled" -> R.drawable.bg_status_cancelled
+            "ongoing" -> R.drawable.bg_status_ongoing
+            else -> R.drawable.bg_status_pending // Default for "Pending" or other statuses
+        }
+        holder.tvStatus.background = ContextCompat.getDrawable(holder.itemView.context, statusDrawableRes)
+
+        // Determine if the booking can be cancelled
+        val isCancellable = booking.status.equals("Confirmed", ignoreCase = true) ||
+                booking.status.equals("Pending", ignoreCase = true)
+
+        holder.btnCancel.visibility = if (isCancellable) View.VISIBLE else View.GONE
+        // The buttons container might need adjustment depending on your final layout logic
+        // For simplicity, we can control the whole container or individual buttons.
+        // holder.layoutButtons.visibility = if(isCancellable) View.VISIBLE else View.GONE
+        // Note: The above line would hide the QR button too. Hiding only the cancel button is often better.
+
 
         // Set button click listeners
         holder.btnViewQR.setOnClickListener {
@@ -80,4 +93,10 @@ class BookingAdapter(
     }
 
     override fun getItemCount(): Int = bookings.size
+
+    // Add this function to allow the activity to update the list of bookings
+    fun updateBookings(newBookings: List<Booking>) {
+        this.bookings = newBookings
+        notifyDataSetChanged()
+    }
 }
