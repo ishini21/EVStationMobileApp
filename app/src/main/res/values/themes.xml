@@ -2,7 +2,7 @@
 <resources>
 
     <!-- Use Material Components theme (AppCompat compatible) -->
-    <style name="Theme.EVStationMobileApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.EVStationMobileApp" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Customize your colors here -->
         <item name="colorPrimary">#10B981</item>
         <item name="colorPrimaryVariant">#059669</item>
