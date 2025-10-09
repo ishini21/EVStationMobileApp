@@ -1,46 +1,45 @@
 package com.example.evstationmobileapp
 
 import android.content.Intent
-import com.example.evstationmobileapp.R
 import android.os.Bundle
-import android.view.View
-import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.example.evstationmobileapp.activities.BookingsActivity
+import com.example.evstationmobileapp.activities.ProfileActivity
 import com.example.evstationmobileapp.activities.StationsActivity
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
-    private var navHome: LinearLayout? = null
-    private var navStations: LinearLayout? = null
-    private var navBookings: LinearLayout? = null
-    private var navProfile: LinearLayout? = null
 
-    protected override fun onCreate(savedInstanceState: Bundle?) {
+    // You only need one variable for the entire navigation view now
+    private lateinit var bottomNavigationView: BottomNavigationView
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.dashboard)
 
-        // Initialize navigation items
-        navHome = findViewById(R.id.navHome)
-        navStations = findViewById(R.id.navStations)
-        navBookings = findViewById(R.id.navBookings)
-        navProfile = findViewById(R.id.navProfile)
+        bottomNavigationView = findViewById(R.id.bottom_navigation)
 
-        // Set click listeners
-        navHome!!.setOnClickListener{
-            setContentView(R.layout.dashboard)
+        // The old LinearLayout code is replaced with this single listener
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_owner_home -> {
+                    // You are already on the home screen, so do nothing or refresh
+                    true
+                }
+                R.id.nav_owner_stations -> {
+                    startActivity(Intent(this, StationsActivity::class.java))
+                    true
+                }
+                R.id.nav_owner_bookings -> {
+                    startActivity(Intent(this, BookingsActivity::class.java))
+                    true
+                }
+                R.id.nav_owner_profile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    true
+                }
+                else -> false
+            }
         }
-
-        navStations!!.setOnClickListener{
-            val intent = Intent(this, StationsActivity::class.java)
-            startActivity(intent)
-        }
-
-
-        navBookings?.setOnClickListener {
-            val intent = Intent(this, BookingsActivity::class.java)
-            startActivity(intent)
-        }
-
-        navProfile!!.setOnClickListener(View.OnClickListener { v: View? -> })
     }
 }

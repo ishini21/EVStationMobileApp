@@ -3,25 +3,25 @@ package com.example.evstationmobileapp.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.evstationmobileapp.MainActivity
 import com.example.evstationmobileapp.R
+import com.example.evstationmobileapp.databinding.ActivityStationDetailsBinding
 import com.example.evstationmobileapp.models.ChargingStation
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class StationDetailsActivity : AppCompatActivity() {
 
+    // The binding object for direct view access
+    private lateinit var binding: ActivityStationDetailsBinding
     private lateinit var station: ChargingStation
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.station_details)
+        // Inflate the layout using View Binding
+        binding = ActivityStationDetailsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Get station data from intent
+        // Get station data from intent (no change here)
         station = ChargingStation(
             id = intent.getIntExtra("STATION_ID", 0),
             name = intent.getStringExtra("STATION_NAME") ?: "",
@@ -34,71 +34,67 @@ class StationDetailsActivity : AppCompatActivity() {
         )
 
         setupViews()
+        setupClickListeners()
         setupNavigation()
     }
 
     private fun setupViews() {
+        // Use the binding object to access views
+        binding.tvStationName.text = station.name
+        binding.tvStationLocation.text = station.location
+        binding.tvAvailableSlots.text = station.availableSlots.toString()
+        binding.tvTotalSlots.text = "/${station.totalSlots}"
+        binding.tvOperatingHours.text = station.operatingHours
+        binding.tvChargingRate.text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
+    }
+
+    private fun setupClickListeners() {
         // Back button
-        findViewById<ImageView>(R.id.btnBack).setOnClickListener {
+        binding.btnBack.setOnClickListener {
             finish()
         }
 
-        // Set station details
-        findViewById<TextView>(R.id.tvStationName).text = station.name
-        findViewById<TextView>(R.id.tvStationLocation).text = station.location
-        findViewById<TextView>(R.id.tvAvailableSlots).text = station.availableSlots.toString()
-        findViewById<TextView>(R.id.tvTotalSlots).text = "/${station.totalSlots}"
-        findViewById<TextView>(R.id.tvOperatingHours).text = station.operatingHours
-        findViewById<TextView>(R.id.tvChargingRate).text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
-
         // Open in Map button
-        findViewById<Button>(R.id.btnOpenInMap).setOnClickListener {
+        binding.btnOpenInMap.setOnClickListener {
             openInMap()
         }
 
-        // Floating Action Button
-        findViewById<FloatingActionButton>(R.id.fabBookNow).setOnClickListener {
+        // Floating Action Button to book
+        binding.fabBookNow.setOnClickListener {
             bookStation()
         }
     }
 
     private fun setupNavigation() {
-        val navHome = findViewById<LinearLayout>(R.id.navHome)
-        val navStations = findViewById<LinearLayout>(R.id.navStations)
-        val navBookings = findViewById<LinearLayout>(R.id.navBookings)
-        val navProfile = findViewById<LinearLayout>(R.id.navProfile)
-
-        navHome.setOnClickListener {
-            // Navigate to Home
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-
-        navStations.setOnClickListener {
-            // Navigate to Stations
-            val intent = Intent(this, StationsActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-
-        navBookings.setOnClickListener {
-            // Navigate to Bookings
-            // val intent = Intent(this, BookingsActivity::class.java)
-            // startActivity(intent)
-        }
-
-        navProfile.setOnClickListener {
-            // Navigate to Profile
-            // val intent = Intent(this, ProfileActivity::class.java)
-            // startActivity(intent)
+        // Use the single listener for the BottomNavigationView
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_owner_home -> {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    true
+                }
+                R.id.nav_owner_stations -> {
+                    // Already on a station-related screen, you might not need to do anything
+                    // or you can navigate back to the main list
+                    startActivity(Intent(this, StationsActivity::class.java))
+                    true
+                }
+                R.id.nav_owner_bookings -> {
+                    startActivity(Intent(this, BookingsActivity::class.java))
+                    true
+                }
+                R.id.nav_owner_profile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    true
+                }
+                else -> false
+            }
         }
     }
 
     private fun openInMap() {
-        // Open location in Google Maps
-        // Replace with actual coordinates
-        val gmmIntentUri = Uri.parse("geo:0,0?q=${station.location}")
+        // Replace with actual coordinates if available, otherwise search by location name
+        val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(station.location)}")
         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
         mapIntent.setPackage("com.google.android.apps.maps")
 
@@ -108,7 +104,7 @@ class StationDetailsActivity : AppCompatActivity() {
     }
 
     private fun bookStation() {
-        // Navigate to new reservation page
+        // This is the code that sends all the necessary data to NewReservationActivity
         val intent = Intent(this, NewReservationActivity::class.java).apply {
             putExtra("STATION_ID", station.id)
             putExtra("STATION_NAME", station.name)

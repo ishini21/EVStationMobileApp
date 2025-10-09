@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.evstationmobileapp"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -67,4 +67,5 @@ dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }
