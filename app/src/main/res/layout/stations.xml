@@ -47,23 +47,18 @@
                 app:searchIcon="@drawable/ic_search"/>
         </androidx.cardview.widget.CardView>
 
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/scrollStations"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/stationsRecyclerView"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:fillViewport="true"
+            android:padding="16dp"
+            android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             app:layout_constraintTop_toBottomOf="@id/searchCard"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-
-            <LinearLayout
-                android:id="@+id/stationsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"/>
-        </androidx.core.widget.NestedScrollView>
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:listitem="@layout/item_charging_station" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

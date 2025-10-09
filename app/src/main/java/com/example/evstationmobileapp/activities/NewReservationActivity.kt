@@ -2,179 +2,260 @@ package com.example.evstationmobileapp.activities
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.os.Build
 import android.os.Bundle
-import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.evstationmobileapp.databinding.NewReservationBinding
+import com.example.evstationmobileapp.models.BookingRequest
 import com.example.evstationmobileapp.models.ChargingStation
+import com.example.evstationmobileapp.models.Slot
 import com.example.evstationmobileapp.remote.ApiClient
+import com.example.evstationmobileapp.utils.SessionManager
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
+@RequiresApi(Build.VERSION_CODES.O)
 class NewReservationActivity : AppCompatActivity() {
 
-    // The binding object that gives you direct access to all views in your layout
     private lateinit var binding: NewReservationBinding
-    private lateinit var station: ChargingStation
+    private var station: ChargingStation? = null
+    private lateinit var sessionManager: SessionManager
 
-    private val calendar = Calendar.getInstance()
-    private val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.US)
-    private val timeFormat = SimpleDateFormat("hh:mm a", Locale.US)
+    // This will hold the list of slots returned by the availability API
+    private var availableSlotsForTime: List<Slot> = listOf()
+
+    private val startCalendar: Calendar = Calendar.getInstance()
+    private val endCalendar: Calendar = Calendar.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Inflate the layout using View Binding
         binding = NewReservationBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Get station data passed from the previous activity
-        station = ChargingStation(
-            id = intent.getIntExtra("STATION_ID", 0),
-            name = intent.getStringExtra("STATION_NAME") ?: "Unknown",
-            location = intent.getStringExtra("STATION_LOCATION") ?: "Unknown",
-            pricePerKwh = intent.getDoubleExtra("PRICE_PER_KWH", 0.0),
+        sessionManager = SessionManager(this)
 
-            // Add these lines to retrieve the missing data
-            availableSlots = intent.getIntExtra("AVAILABLE_SLOTS", 0),
-            totalSlots = intent.getIntExtra("TOTAL_SLOTS", 0),
-            operatingHours = intent.getStringExtra("OPERATING_HOURS") ?: "N/A"
-            // Add any other fields your ChargingStation data class requires
-        )
+        val stationId = intent.getStringExtra("STATION_ID")
+        if (stationId.isNullOrEmpty()) {
+            Toast.makeText(this, "Error: Station ID missing.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
 
-        setupUI()
+        fetchStationDetails(stationId)
         setupClickListeners()
+        setupInitialUIState()
+    }
+
+    private fun setupInitialUIState() {
+        // Spinner is disabled until the user selects a valid time range
+        binding.slotSpinner.isEnabled = false
+    }
+
+    private fun fetchStationDetails(stationId: String) {
+        lifecycleScope.launch {
+            try {
+                // Corrected: Removed the authentication token from the API call as it's not required by the interface definition.
+                val response = ApiClient.apiService.getStationById(stationId)
+                if (response.isSuccessful && response.body() != null) {
+                    station = response.body()
+                    setupUI()
+                } else {
+                    Toast.makeText(this@NewReservationActivity, "Failed to load station details: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@NewReservationActivity, "Network error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupUI() {
-        // Use the binding object to set initial values
-        binding.tvStationLocation.text = station.location
-        binding.tvStationPrice.text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
+        station?.let {
+            binding.tvStationName.text = it.stationName
+            binding.tvStationLocation.text = it.location.address
+        }
+        binding.etName.setText(sessionManager.fetchUserfirstName() ?: "")
+        binding.etEmail.setText(sessionManager.fetchUserIdentifier() ?: "")
     }
 
     private fun setupClickListeners() {
-        binding.btnBack.setOnClickListener {
-            finish() // Go back to the previous screen
-        }
-
-        binding.btnBookNow.setOnClickListener {
-            validateAndBookReservation()
-        }
-
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnBookNow.setOnClickListener { validateAndBookReservation() }
         setupDateTimePickers()
     }
 
     private fun setupDateTimePickers() {
-        // Date Picker
+        val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.US)
+
         binding.etReservationDate.setOnClickListener {
             val today = Calendar.getInstance()
+            // Set max date to 7 days from today
             val maxDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }
 
-            val datePickerDialog = DatePickerDialog(
-                this,
-                { _, year, month, dayOfMonth ->
-                    calendar.set(year, month, dayOfMonth)
-                    binding.etReservationDate.setText(dateFormat.format(calendar.time))
-                    binding.tvDateError.visibility = View.GONE
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-            datePickerDialog.datePicker.minDate = today.timeInMillis
-            datePickerDialog.datePicker.maxDate = maxDate.timeInMillis
-            datePickerDialog.show()
+            DatePickerDialog(this, { _, year, month, day ->
+                startCalendar.set(year, month, day)
+                endCalendar.set(year, month, day)
+                binding.etReservationDate.setText(dateFormat.format(startCalendar.time))
+                clearSlotSelection()
+            }, today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH)
+            ).apply {
+                datePicker.minDate = today.timeInMillis
+                datePicker.maxDate = maxDate.timeInMillis
+            }.show()
         }
 
-        // Time From Picker
         binding.etTimeFrom.setOnClickListener {
-            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = calendar.get(Calendar.MINUTE)
-
-            TimePickerDialog(
-                this,
-                { _, hourOfDay, minute ->
-                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                    calendar.set(Calendar.MINUTE, minute)
-                    binding.etTimeFrom.setText(timeFormat.format(calendar.time))
-                },
-                currentHour,
-                currentMinute,
-                false // Use 'false' for 12-hour format with AM/PM
-            ).show()
+            TimePickerDialog(this, { _, hour, minute ->
+                startCalendar.set(Calendar.HOUR_OF_DAY, hour)
+                startCalendar.set(Calendar.MINUTE, minute)
+                binding.etTimeFrom.setText(timeFormat.format(startCalendar.time))
+                clearSlotSelection()
+            }, startCalendar.get(Calendar.HOUR_OF_DAY), startCalendar.get(Calendar.MINUTE), false).show()
         }
 
-        // Time To Picker
         binding.etTimeTo.setOnClickListener {
-            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = calendar.get(Calendar.MINUTE)
-
-            TimePickerDialog(
-                this,
-                { _, hourOfDay, minute ->
-                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                    calendar.set(Calendar.MINUTE, minute)
-                    binding.etTimeTo.setText(timeFormat.format(calendar.time))
-                },
-                currentHour,
-                currentMinute,
-                false
-            ).show()
+            TimePickerDialog(this, { _, hour, minute ->
+                endCalendar.set(Calendar.HOUR_OF_DAY, hour)
+                endCalendar.set(Calendar.MINUTE, minute)
+                binding.etTimeTo.setText(timeFormat.format(endCalendar.time))
+                // After selecting the end time, call the API to get available slots
+                fetchAvailableSlotsFromServer()
+            }, endCalendar.get(Calendar.HOUR_OF_DAY), endCalendar.get(Calendar.MINUTE), false).show()
         }
+    }
+
+    private fun fetchAvailableSlotsFromServer() {
+        if (station == null) {
+            Toast.makeText(this, "Station data not loaded yet.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (startCalendar.timeInMillis >= endCalendar.timeInMillis) {
+            Toast.makeText(this, "End time must be after start time.", Toast.LENGTH_SHORT).show()
+            clearSlotSelection()
+            return
+        }
+
+        val token = sessionManager.fetchAuthToken()
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Authentication error. Please log in again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val startTimeIso = formatToIsoUtc(startCalendar)
+        val endTimeIso = formatToIsoUtc(endCalendar)
+        val stationId = station!!.id
+
+        lifecycleScope.launch {
+            try {
+                // Corrected: Added "Bearer " prefix and called the instance method
+                val response = ApiClient.apiService.getAvailableSlots("Bearer $token", stationId, startTimeIso, endTimeIso)
+                if (response.isSuccessful && response.body() != null) {
+                    availableSlotsForTime = response.body()!!
+                    populateAvailableSlotsSpinner(availableSlotsForTime)
+                } else {
+                    Toast.makeText(this@NewReservationActivity, "Could not check slot availability: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    clearSlotSelection()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@NewReservationActivity, "Network error while checking slots: ${e.message}", Toast.LENGTH_SHORT).show()
+                clearSlotSelection()
+            }
+        }
+    }
+
+    private fun populateAvailableSlotsSpinner(slots: List<Slot>) {
+        if (slots.isEmpty()) {
+            Toast.makeText(this, "No slots available for the selected time.", Toast.LENGTH_SHORT).show()
+            clearSlotSelection()
+            return
+        }
+
+        val slotStrings = slots.map { "${it.connectorType} - ${it.powerRating} (Rs. ${it.pricePerKWh.toInt()})" }
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, slotStrings)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.slotSpinner.adapter = adapter
+        binding.slotSpinner.isEnabled = true
+    }
+
+    private fun clearSlotSelection() {
+        binding.slotSpinner.adapter = null
+        binding.slotSpinner.isEnabled = false
+        availableSlotsForTime = emptyList()
     }
 
     private fun validateAndBookReservation() {
-        // Access text from EditTexts using the binding object
-        val date = binding.etReservationDate.text.toString()
-        val timeFrom = binding.etTimeFrom.text.toString()
-        val timeTo = binding.etTimeTo.text.toString()
         val name = binding.etName.text.toString().trim()
         val email = binding.etEmail.text.toString().trim()
-        val phoneNo = binding.etPhoneNo.text.toString().trim()
-        val vehicleNumber = binding.etVehicleNumber.text.toString().trim()
+        val phone = binding.etPhoneNo.text.toString().trim()
+        val nic = binding.etNicNumber.text.toString().trim()
+        val kwh = binding.etEstimatedKwh.text.toString()
 
-        // Validation logic remains the same
-        if (date.isEmpty()) {
-            binding.tvDateError.visibility = View.VISIBLE
-            Toast.makeText(this, "Please select a reservation date", Toast.LENGTH_SHORT).show()
+        if (listOf(name, email, phone, nic, kwh, binding.etReservationDate.text, binding.etTimeFrom.text, binding.etTimeTo.text).any { it.toString().isEmpty() }) {
+            Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show()
             return
         }
-        if (timeFrom.isEmpty()) {
-            Toast.makeText(this, "Please select a start time", Toast.LENGTH_SHORT).show()
+
+        val selectedSlotIndex = binding.slotSpinner.selectedItemPosition
+        if (selectedSlotIndex < 0 || selectedSlotIndex >= availableSlotsForTime.size) {
+            Toast.makeText(this, "Please select an available connector.", Toast.LENGTH_SHORT).show()
             return
         }
-        // ... Add the rest of your validation for other fields ...
+        val selectedSlot = availableSlotsForTime[selectedSlotIndex]
 
-        // If validation passes, proceed to book the reservation
-        bookReservation(date, timeFrom, timeTo)
+        val durationMillis = endCalendar.timeInMillis - startCalendar.timeInMillis
+        val durationMinutes = TimeUnit.MILLISECONDS.toMinutes(durationMillis).toInt()
+
+        val bookingRequest = BookingRequest(
+            customerNic = nic,
+            customerName = name,
+            customerEmail = email,
+            customerPhone = phone,
+            stationId = station!!.id,
+            slotId = selectedSlot.id,
+            reservationStartTime = formatToIsoUtc(startCalendar),
+            durationMinutes = durationMinutes,
+            estimatedKWh = kwh.toInt(),
+            notes = "Booking from Android App"
+        )
+
+        val token = sessionManager.fetchAuthToken()
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Authentication error. Please log in again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        bookReservation("Bearer $token", bookingRequest)
     }
 
-    private fun bookReservation(date: String, timeFrom: String, timeTo: String) {
-        // Launch a coroutine to make the network call
+    private fun bookReservation(token: String, request: BookingRequest) {
         lifecycleScope.launch {
             try {
-                // TODO: Create a reservation object and an 'addReservation' function in your ApiClient
-                // val reservation = Reservation(...)
-                // val resultJsonString = ApiClient.addReservation(reservation)
-                // val resultJson = JSONObject(resultJsonString)
-
-                // if (!resultJson.has("error")) {
-                //    Toast.makeText(this@NewReservationActivity, "Reservation booked successfully!", Toast.LENGTH_LONG).show()
-                //    finish() // Close activity on success
-                // } else {
-                //    val errorMessage = resultJson.getString("error")
-                //    Toast.makeText(this@NewReservationActivity, "Booking failed: $errorMessage", Toast.LENGTH_LONG).show()
-                // }
-
-                // For now, we'll just show a success message for testing
-                Toast.makeText(this@NewReservationActivity, "Reservation booked successfully!", Toast.LENGTH_LONG).show()
-                finish()
-
+                val response = ApiClient.apiService.createBooking(token, request)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@NewReservationActivity, "Booking successful!", Toast.LENGTH_LONG).show()
+                    finish()
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    Toast.makeText(this@NewReservationActivity, "Booking failed: ${response.code()} - $errorBody", Toast.LENGTH_LONG).show()
+                }
             } catch (e: Exception) {
                 Toast.makeText(this@NewReservationActivity, "An error occurred: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
+
+    private fun formatToIsoUtc(calendar: Calendar): String {
+        val instant = Instant.ofEpochMilli(calendar.timeInMillis)
+        return DateTimeFormatter.ISO_INSTANT.withZone(ZoneId.of("UTC")).format(instant)
+    }
 }
+
