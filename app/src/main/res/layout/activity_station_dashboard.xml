@@ -33,7 +33,18 @@
             android:layout_height="wrap_content"
             android:text="Welcome, Station Operator!"
             android:textSize="22sp"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="40dp"/>
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/fab_scan_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Scan Booking QR"
+            android:textColor="@android:color/white"
+            app:icon="@drawable/ic_qr_code_scanner"
+            app:iconTint="@android:color/white" />
 
     </FrameLayout>
 

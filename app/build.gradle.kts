@@ -78,4 +78,5 @@ dependencies {
     // Coroutines for asynchronous calls
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }
