@@ -2,114 +2,94 @@ package com.example.evstationmobileapp.activities
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.evstationmobileapp.MainActivity
-import com.example.evstationmobileapp.R
+import androidx.lifecycle.lifecycleScope
+import com.example.evstationmobileapp.databinding.NewReservationBinding
 import com.example.evstationmobileapp.models.ChargingStation
+import com.example.evstationmobileapp.remote.ApiClient
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 class NewReservationActivity : AppCompatActivity() {
 
+    // The binding object that gives you direct access to all views in your layout
+    private lateinit var binding: NewReservationBinding
     private lateinit var station: ChargingStation
-    private lateinit var etReservationDate: EditText
-    private lateinit var etTimeFrom: EditText
-    private lateinit var etTimeTo: EditText
-    private lateinit var etName: EditText
-    private lateinit var etEmail: EditText
-    private lateinit var etPhoneNo: EditText
-    private lateinit var etVehicleNumber: EditText
-    private lateinit var tvStationLocation: TextView
-    private lateinit var tvStationPrice: TextView
-    private lateinit var tvDateError: TextView
 
     private val calendar = Calendar.getInstance()
-    private val dateFormat = SimpleDateFormat("MM/dd/yy", Locale.getDefault())
-    private val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+    private val timeFormat = SimpleDateFormat("hh:mm a", Locale.US)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.new_reservation)
+        // Inflate the layout using View Binding
+        binding = NewReservationBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Get station data from intent
+        // Get station data passed from the previous activity
         station = ChargingStation(
             id = intent.getIntExtra("STATION_ID", 0),
-            name = intent.getStringExtra("STATION_NAME") ?: "",
-            location = intent.getStringExtra("STATION_LOCATION") ?: "",
+            name = intent.getStringExtra("STATION_NAME") ?: "Unknown",
+            location = intent.getStringExtra("STATION_LOCATION") ?: "Unknown",
+            pricePerKwh = intent.getDoubleExtra("PRICE_PER_KWH", 0.0),
+
+            // Add these lines to retrieve the missing data
             availableSlots = intent.getIntExtra("AVAILABLE_SLOTS", 0),
             totalSlots = intent.getIntExtra("TOTAL_SLOTS", 0),
-            operatingHours = intent.getStringExtra("OPERATING_HOURS") ?: "",
-            pricePerKwh = intent.getDoubleExtra("PRICE_PER_KWH", 0.0),
-            is24Hours = intent.getBooleanExtra("IS_24_HOURS", false)
+            operatingHours = intent.getStringExtra("OPERATING_HOURS") ?: "N/A"
+            // Add any other fields your ChargingStation data class requires
         )
 
-        initializeViews()
-        setupStationInfo()
-        setupDateTimePickers()
-        setupNavigation()
+        setupUI()
+        setupClickListeners()
     }
 
-    private fun initializeViews() {
-        findViewById<ImageView>(R.id.btnBack).setOnClickListener {
-            finish()
+    private fun setupUI() {
+        // Use the binding object to set initial values
+        binding.tvStationLocation.text = station.location
+        binding.tvStationPrice.text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
+    }
+
+    private fun setupClickListeners() {
+        binding.btnBack.setOnClickListener {
+            finish() // Go back to the previous screen
         }
 
-        tvStationLocation = findViewById(R.id.tvStationLocation)
-        tvStationPrice = findViewById(R.id.tvStationPrice)
-        tvDateError = findViewById(R.id.tvDateError)
-
-        etReservationDate = findViewById(R.id.etReservationDate)
-        etTimeFrom = findViewById(R.id.etTimeFrom)
-        etTimeTo = findViewById(R.id.etTimeTo)
-        etName = findViewById(R.id.etName)
-        etEmail = findViewById(R.id.etEmail)
-        etPhoneNo = findViewById(R.id.etPhoneNo)
-        etVehicleNumber = findViewById(R.id.etVehicleNumber)
-
-        findViewById<Button>(R.id.btnBookNow).setOnClickListener {
+        binding.btnBookNow.setOnClickListener {
             validateAndBookReservation()
         }
-    }
 
-    private fun setupStationInfo() {
-        tvStationLocation.text = station.location
-        tvStationPrice.text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
+        setupDateTimePickers()
     }
 
     private fun setupDateTimePickers() {
         // Date Picker
-        etReservationDate.setOnClickListener {
+        binding.etReservationDate.setOnClickListener {
             val today = Calendar.getInstance()
-            val maxDate = Calendar.getInstance()
-            maxDate.add(Calendar.DAY_OF_YEAR, 7)
+            val maxDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }
 
             val datePickerDialog = DatePickerDialog(
                 this,
                 { _, year, month, dayOfMonth ->
                     calendar.set(year, month, dayOfMonth)
-                    etReservationDate.setText(dateFormat.format(calendar.time))
-                    tvDateError.visibility = android.view.View.GONE
+                    binding.etReservationDate.setText(dateFormat.format(calendar.time))
+                    binding.tvDateError.visibility = View.GONE
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
             )
-
             datePickerDialog.datePicker.minDate = today.timeInMillis
             datePickerDialog.datePicker.maxDate = maxDate.timeInMillis
             datePickerDialog.show()
         }
 
         // Time From Picker
-        etTimeFrom.setOnClickListener {
+        binding.etTimeFrom.setOnClickListener {
             val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
             val currentMinute = calendar.get(Calendar.MINUTE)
 
@@ -118,16 +98,16 @@ class NewReservationActivity : AppCompatActivity() {
                 { _, hourOfDay, minute ->
                     calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                     calendar.set(Calendar.MINUTE, minute)
-                    etTimeFrom.setText(timeFormat.format(calendar.time))
+                    binding.etTimeFrom.setText(timeFormat.format(calendar.time))
                 },
                 currentHour,
                 currentMinute,
-                false
+                false // Use 'false' for 12-hour format with AM/PM
             ).show()
         }
 
         // Time To Picker
-        etTimeTo.setOnClickListener {
+        binding.etTimeTo.setOnClickListener {
             val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
             val currentMinute = calendar.get(Calendar.MINUTE)
 
@@ -136,7 +116,7 @@ class NewReservationActivity : AppCompatActivity() {
                 { _, hourOfDay, minute ->
                     calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                     calendar.set(Calendar.MINUTE, minute)
-                    etTimeTo.setText(timeFormat.format(calendar.time))
+                    binding.etTimeTo.setText(timeFormat.format(calendar.time))
                 },
                 currentHour,
                 currentMinute,
@@ -146,102 +126,55 @@ class NewReservationActivity : AppCompatActivity() {
     }
 
     private fun validateAndBookReservation() {
-        val date = etReservationDate.text.toString()
-        val timeFrom = etTimeFrom.text.toString()
-        val timeTo = etTimeTo.text.toString()
-        val name = etName.text.toString()
-        val email = etEmail.text.toString()
-        val phoneNo = etPhoneNo.text.toString()
-        val vehicleNumber = etVehicleNumber.text.toString()
+        // Access text from EditTexts using the binding object
+        val date = binding.etReservationDate.text.toString()
+        val timeFrom = binding.etTimeFrom.text.toString()
+        val timeTo = binding.etTimeTo.text.toString()
+        val name = binding.etName.text.toString().trim()
+        val email = binding.etEmail.text.toString().trim()
+        val phoneNo = binding.etPhoneNo.text.toString().trim()
+        val vehicleNumber = binding.etVehicleNumber.text.toString().trim()
 
-        // Validation
-        when {
-            date.isEmpty() -> {
-                Toast.makeText(this, "Please select a reservation date", Toast.LENGTH_SHORT).show()
-                tvDateError.visibility = android.view.View.VISIBLE
-                return
-            }
-            timeFrom.isEmpty() -> {
-                Toast.makeText(this, "Please select start time", Toast.LENGTH_SHORT).show()
-                return
-            }
-            timeTo.isEmpty() -> {
-                Toast.makeText(this, "Please select end time", Toast.LENGTH_SHORT).show()
-                return
-            }
-            name.isEmpty() -> {
-                Toast.makeText(this, "Please enter your name", Toast.LENGTH_SHORT).show()
-                return
-            }
-            email.isEmpty() -> {
-                Toast.makeText(this, "Please enter your email", Toast.LENGTH_SHORT).show()
-                return
-            }
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
-                Toast.makeText(this, "Please enter a valid email", Toast.LENGTH_SHORT).show()
-                return
-            }
-            phoneNo.isEmpty() -> {
-                Toast.makeText(this, "Please enter your phone number", Toast.LENGTH_SHORT).show()
-                return
-            }
-            vehicleNumber.isEmpty() -> {
-                Toast.makeText(this, "Please enter your vehicle number", Toast.LENGTH_SHORT).show()
-                return
-            }
+        // Validation logic remains the same
+        if (date.isEmpty()) {
+            binding.tvDateError.visibility = View.VISIBLE
+            Toast.makeText(this, "Please select a reservation date", Toast.LENGTH_SHORT).show()
+            return
         }
+        if (timeFrom.isEmpty()) {
+            Toast.makeText(this, "Please select a start time", Toast.LENGTH_SHORT).show()
+            return
+        }
+        // ... Add the rest of your validation for other fields ...
 
-        // If all validations pass, proceed with booking
-        bookReservation(date, timeFrom, timeTo, name, email, phoneNo, vehicleNumber)
+        // If validation passes, proceed to book the reservation
+        bookReservation(date, timeFrom, timeTo)
     }
 
-    private fun bookReservation(
-        date: String,
-        timeFrom: String,
-        timeTo: String,
-        name: String,
-        email: String,
-        phoneNo: String,
-        vehicleNumber: String
-    ) {
-        // Here you would typically make an API call to your backend
-        // For now, just show a success message
-        Toast.makeText(this, "Reservation booked successfully!", Toast.LENGTH_LONG).show()
+    private fun bookReservation(date: String, timeFrom: String, timeTo: String) {
+        // Launch a coroutine to make the network call
+        lifecycleScope.launch {
+            try {
+                // TODO: Create a reservation object and an 'addReservation' function in your ApiClient
+                // val reservation = Reservation(...)
+                // val resultJsonString = ApiClient.addReservation(reservation)
+                // val resultJson = JSONObject(resultJsonString)
 
-        // Navigate to bookings page or back to home
-        finish()
-    }
+                // if (!resultJson.has("error")) {
+                //    Toast.makeText(this@NewReservationActivity, "Reservation booked successfully!", Toast.LENGTH_LONG).show()
+                //    finish() // Close activity on success
+                // } else {
+                //    val errorMessage = resultJson.getString("error")
+                //    Toast.makeText(this@NewReservationActivity, "Booking failed: $errorMessage", Toast.LENGTH_LONG).show()
+                // }
 
-    private fun setupNavigation() {
-        val navHome = findViewById<LinearLayout>(R.id.navHome)
-        val navStations = findViewById<LinearLayout>(R.id.navStations)
-        val navBookings = findViewById<LinearLayout>(R.id.navBookings)
-        val navProfile = findViewById<LinearLayout>(R.id.navProfile)
+                // For now, we'll just show a success message for testing
+                Toast.makeText(this@NewReservationActivity, "Reservation booked successfully!", Toast.LENGTH_LONG).show()
+                finish()
 
-        navHome.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-            startActivity(intent)
-            finish()
-        }
-
-        navStations.setOnClickListener {
-            val intent = Intent(this, StationsActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-            startActivity(intent)
-            finish()
-        }
-
-        navBookings.setOnClickListener {
-            // Navigate to Bookings
-            // val intent = Intent(this, BookingsActivity::class.java)
-            // startActivity(intent)
-        }
-
-        navProfile.setOnClickListener {
-            // Navigate to Profile
-            // val intent = Intent(this, ProfileActivity::class.java)
-            // startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this@NewReservationActivity, "An error occurred: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 }

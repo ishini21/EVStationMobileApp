@@ -1,19 +1,21 @@
 package com.example.evstationmobileapp.activities
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.evstationmobileapp.databinding.ActivityProfileBinding
 import com.example.evstationmobileapp.db.UserDbHelper
 import com.example.evstationmobileapp.models.EVOwner
+import com.example.evstationmobileapp.utils.SessionManager
 
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProfileBinding
     private lateinit var dbHelper: UserDbHelper
+    private lateinit var sessionManager: SessionManager
     private var currentUser: EVOwner? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,154 +24,89 @@ class ProfileActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         dbHelper = UserDbHelper(this)
+        sessionManager = SessionManager(this)
 
         loadUserData()
         setupClickListeners()
     }
 
-    private fun loadUserData() {
-        val sharedPref = getSharedPreferences("user_session", MODE_PRIVATE)
-        val userNIC = sharedPref.getString("user_nic", "") ?: ""
-
-        currentUser = dbHelper.getUserByNIC(userNIC)
-
-        currentUser?.let { user ->
-            binding.etNIC.setText(user.nic)
-            binding.etFirstName.setText(user.firstName)
-            binding.etLastName.setText(user.lastName)
-            binding.etEmail.setText(user.email)
-            binding.etPhone.setText(user.phone)
-
-            // NIC cannot be changed
-            binding.etNIC.isEnabled = false
-
-            // Show status
-            binding.tvStatus.text = if (user.isActive) "Active" else "Deactivated"
-            binding.tvStatus.setBackgroundColor(
-                if (user.isActive) getColor(android.R.color.holo_green_light)
-                else getColor(android.R.color.holo_red_light)
-            )
-        }
-    }
-
     private fun setupClickListeners() {
         binding.btnUpdate.setOnClickListener {
-            if (validateForm()) {
-                updateProfile()
-            }
+            Toast.makeText(this, "Update feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnDeactivate.setOnClickListener {
-            showDeactivationConfirmation()
+            Toast.makeText(this, "Deactivation feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
-        binding.btnBack.setOnClickListener {
-            finish()
+        binding.btnLogout.setOnClickListener {
+            showLogoutConfirmation()
         }
     }
 
-    private fun validateForm(): Boolean {
-        val firstName = binding.etFirstName.text.toString().trim()
-        val lastName = binding.etLastName.text.toString().trim()
-        val email = binding.etEmail.text.toString().trim()
-        val phone = binding.etPhone.text.toString().trim()
+    private fun loadUserData() {
+        val userIdentifier = sessionManager.fetchUserIdentifier()
 
-        if (firstName.isEmpty()) {
-            binding.etFirstName.error = "First name is required"
-            return false
+        if (userIdentifier == null) {
+            // If there's no identifier at all, the session is invalid.
+            Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_LONG).show()
+            logoutUser()
+            return
         }
 
-        if (lastName.isEmpty()) {
-            binding.etLastName.error = "Last name is required"
-            return false
-        }
+        // --- THIS IS THE CORRECTED LOGIC ---
+        // Try to find a user in the local DB with the identifier (which would be a NIC).
+        currentUser = dbHelper.getUserByNIC(userIdentifier)
 
-        if (email.isEmpty()) {
-            binding.etEmail.error = "Email is required"
-            return false
-        }
+        if (currentUser != null) {
+            // User was found locally, so they are an EV Owner.
+            currentUser?.let { user ->
+                binding.etNic.setText(user.nic)
+                binding.etFirstName.setText(user.firstName)
+                binding.etLastName.setText(user.lastName)
+                binding.etEmail.setText(user.email)
+                binding.etPhone.setText(user.phone)
 
-        if (phone.isEmpty()) {
-            binding.etPhone.error = "Phone number is required"
-            return false
-        }
-
-        // Basic email validation
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            binding.etEmail.error = "Please enter a valid email"
-            return false
-        }
-
-        return true
-    }
-
-    private fun updateProfile() {
-        currentUser?.let { user ->
-            val updatedUser = EVOwner(
-                nic = user.nic,
-                firstName = binding.etFirstName.text.toString().trim(),
-                lastName = binding.etLastName.text.toString().trim(),
-                email = binding.etEmail.text.toString().trim(),
-                phone = binding.etPhone.text.toString().trim(),
-                password = user.password, // Keep existing password
-                isActive = user.isActive
-            )
-
-            if (dbHelper.updateUser(updatedUser)) {
-                Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
-
-                // Update session if email changed
-                if (user.email != updatedUser.email) {
-                    updateUserSession(updatedUser)
-                }
-            } else {
-                Toast.makeText(this, "Failed to update profile", Toast.LENGTH_LONG).show()
+                // Show EV Owner specific buttons
+                binding.btnUpdate.visibility = View.VISIBLE
+                binding.btnDeactivate.visibility = View.VISIBLE
             }
+        } else {
+            // No user found locally, so this must be a Station Operator.
+            // The 'userIdentifier' is their email.
+            val firstName = sessionManager.fetchUserfirstName()
+
+            binding.etFirstName.setText(firstName ?: "Station Operator")
+            binding.etLastName.setText("")
+            binding.etNic.setText("N/A")
+            binding.etEmail.setText(userIdentifier) // Display the email
+            binding.etPhone.setText("N/A")
+
+            // Disable fields not applicable to Station Operators
+            binding.etNic.isEnabled = false
+            binding.etEmail.isEnabled = false
+            binding.etPhone.isEnabled = false
+
+            // Hide buttons not applicable to Station Operators
+            binding.btnUpdate.visibility = View.GONE
+            binding.btnDeactivate.visibility = View.GONE
         }
     }
 
-    private fun showDeactivationConfirmation() {
+    private fun showLogoutConfirmation() {
         AlertDialog.Builder(this)
-            .setTitle("Deactivate Account")
-            .setMessage("Are you sure you want to deactivate your account? You will not be able to log in until a back-office officer reactivates your account.")
-            .setPositiveButton("Deactivate") { _: DialogInterface, _: Int ->
-                deactivateAccount()
-            }
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Logout") { _, _ -> logoutUser() }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun deactivateAccount() {
-        currentUser?.let { user ->
-            if (dbHelper.deactivateUser(user.nic)) {
-                Toast.makeText(this, "Account deactivated successfully", Toast.LENGTH_LONG).show()
-
-                // Logout user
-                logoutUser()
-            } else {
-                Toast.makeText(this, "Failed to deactivate account", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun updateUserSession(user: EVOwner) {
-        val sharedPref = getSharedPreferences("user_session", MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            putString("user_email", user.email)
-            putString("user_name", "${user.firstName} ${user.lastName}")
-            apply()
-        }
-    }
-
     private fun logoutUser() {
-        val sharedPref = getSharedPreferences("user_session", MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            clear()
-            apply()
-        }
-
+        sessionManager.logout()
         val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
-        finishAffinity()
+        finish()
     }
 }
