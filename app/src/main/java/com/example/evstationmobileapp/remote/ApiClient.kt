@@ -13,7 +13,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "http://192.168.1.17:5276/"
+    private const val BASE_URL = "http://192.168.1.17:5276/api/"
+//    private const val BASE_URL = "http://10.0.2.2:5276/api/"
+
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
@@ -29,7 +31,7 @@ object ApiClient {
     // This is a suspend function to be called from a coroutine
     suspend fun loginUser(identifier: String, password: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL("${BASE_URL}/auth/mobile-login")
+            val url = URL("${BASE_URL}auth/mobile-login")
             val connection = url.openConnection() as HttpURLConnection
             var result = ""
 
