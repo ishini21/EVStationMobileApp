@@ -3,7 +3,6 @@ package com.example.evstationmobileapp.adapters
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.evstationmobileapp.R
@@ -11,31 +10,8 @@ import com.example.evstationmobileapp.models.ChargingStation
 
 class ChargingStationAdapter(
     private var stations: List<ChargingStation>,
-    private val onItemClick: (ChargingStation) -> Unit
+    private val onItemClicked: (ChargingStation) -> Unit
 ) : RecyclerView.Adapter<ChargingStationAdapter.StationViewHolder>() {
-
-    inner class StationViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val stationName: TextView = view.findViewById(R.id.stationName)
-        val stationLocation: TextView = view.findViewById(R.id.stationLocation)
-        val availableSlots: TextView = view.findViewById(R.id.availableSlots)
-        val totalSlots: TextView = view.findViewById(R.id.totalSlots)
-        val operatingHours: TextView = view.findViewById(R.id.operatingHours)
-        val priceRate: TextView = view.findViewById(R.id.priceRate)
-        val timeIcon: ImageView = view.findViewById(R.id.timeIcon)
-
-        fun bind(station: ChargingStation) {
-            stationName.text = station.name
-            stationLocation.text = station.location
-            availableSlots.text = station.availableSlots.toString()
-            totalSlots.text = "/${station.totalSlots} Slots"
-            operatingHours.text = station.operatingHours
-            priceRate.text = "Rs. ${station.pricePerKwh.toInt()}/kWh"
-
-            itemView.setOnClickListener {
-                onItemClick(station)
-            }
-        }
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StationViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -44,13 +20,48 @@ class ChargingStationAdapter(
     }
 
     override fun onBindViewHolder(holder: StationViewHolder, position: Int) {
-        holder.bind(stations[position])
+        val station = stations[position]
+        holder.bind(station, onItemClicked)
     }
 
-    override fun getItemCount() = stations.size
+    override fun getItemCount(): Int = stations.size
 
-    fun updateStations(newStations: List<ChargingStation>) {
-        stations = newStations
+    fun updateStations(filteredStations: List<ChargingStation>) {
+        this.stations = filteredStations
         notifyDataSetChanged()
+    }
+
+    class StationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val nameTextView: TextView = itemView.findViewById(R.id.stationName)
+        private val locationTextView: TextView = itemView.findViewById(R.id.stationLocation)
+        private val totalSlotsTextView: TextView = itemView.findViewById(R.id.totalSlots)
+        private val operatingHoursTextView: TextView = itemView.findViewById(R.id.operatingHours)
+
+        // These views from your XML are not supported by the API data provided
+        private val availableSlotsTextView: TextView = itemView.findViewById(R.id.availableSlots)
+        private val priceRateTextView: TextView = itemView.findViewById(R.id.priceRate)
+
+
+        fun bind(station: ChargingStation, onItemClicked: (ChargingStation) -> Unit) {
+            nameTextView.text = station.stationName
+            locationTextView.text = station.location.address
+            totalSlotsTextView.text = "/${station.totalSlots} Slots"
+
+            // Format operating hours
+            if (station.operatingHours.is24Hours) {
+                operatingHoursTextView.text = "24/7"
+            } else {
+                operatingHoursTextView.text = "${station.operatingHours.openTime} - ${station.operatingHours.closeTime}"
+            }
+
+            // Hide fields that are not available from the API
+            availableSlotsTextView.visibility = View.GONE
+            priceRateTextView.visibility = View.GONE
+
+
+            itemView.setOnClickListener {
+                onItemClicked(station)
+            }
+        }
     }
 }

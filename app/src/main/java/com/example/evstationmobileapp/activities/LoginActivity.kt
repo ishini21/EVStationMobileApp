@@ -2,6 +2,7 @@ package com.example.evstationmobileapp.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -88,6 +89,7 @@ class LoginActivity : AppCompatActivity() {
                     showError(errorMessage)
                 }
             } catch (e: Exception) {
+                Log.e("LoginError", "Login API call failed with exception", e)
                 showError("An error occurred. Please check your connection.")
                 e.printStackTrace()
             } finally {

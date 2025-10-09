@@ -8,15 +8,28 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "http://10.0.2.2:5276/api/auth/mobile-login"
+    private const val BASE_URL = "http://192.168.1.17:5276/"
+
+    private val retrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    val apiService: ApiService by lazy {
+        retrofit.create(ApiService::class.java)
+    }
 
     // This is a suspend function to be called from a coroutine
     suspend fun loginUser(identifier: String, password: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL(BASE_URL)
+            val url = URL("${BASE_URL}/auth/mobile-login")
             val connection = url.openConnection() as HttpURLConnection
             var result = ""
 
