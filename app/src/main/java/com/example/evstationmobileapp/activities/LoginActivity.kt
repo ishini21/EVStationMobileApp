@@ -2,16 +2,24 @@ package com.example.evstationmobileapp.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.evstationmobileapp.MainActivity
 import com.example.evstationmobileapp.databinding.ActivityLoginBinding
 import com.example.evstationmobileapp.db.UserDbHelper
 import com.example.evstationmobileapp.models.EVOwner
+import com.example.evstationmobileapp.remote.ApiClient
+import com.example.evstationmobileapp.utils.SessionManager
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private lateinit var dbHelper: UserDbHelper
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +27,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         dbHelper = UserDbHelper(this)
+        sessionManager = SessionManager(this)
 
         setupClickListeners()
     }
@@ -26,62 +35,114 @@ class LoginActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         binding.btnLogin.setOnClickListener {
             if (validateLoginForm()) {
-                authenticateUser()
+                performLogin()
             }
         }
-
-        binding.tvRegister.setOnClickListener {
-            val intent = Intent(this, RegistrationActivity::class.java)
-            startActivity(intent)
-        }
+        // ... your register listener
     }
 
-    private fun validateLoginForm(): Boolean {
-        val email = binding.etEmail.text.toString().trim()
+    private fun performLogin() {
+        showLoading(true)
+        val identifier = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString()
 
-        if (email.isEmpty()) {
-            binding.etEmail.error = "Email is required"
+        lifecycleScope.launch {
+            try {
+                val resultJsonString = ApiClient.loginUser(identifier, password)
+                val resultJson = JSONObject(resultJsonString)
+
+                if (resultJson.has("token")) {
+                    val token = resultJson.getString("token")
+                    val role = resultJson.getString("role")
+                    val firstName = resultJson.getString("firstName")
+                    val lastName = resultJson.getString("lastName")
+
+                    if (role == "EVOwner") {
+                        // For EV Owners, get the NIC and save it as the identifier
+                        val nic = resultJson.getString("nic")
+                        sessionManager.saveAuthToken(token, nic, firstName)
+
+                        // Save the full user object to the local database
+                        val user = EVOwner(
+                            nic = nic,
+                            firstName = firstName,
+                            lastName = lastName,
+                            email = resultJson.getString("email"),
+                            phone = "", // Adjust if API provides this
+                            password = "",
+                            isActive = true
+                        )
+                        dbHelper.createUser(user)
+
+                    } else if (role == "StationOperator") {
+                        // For Station Operators, get their email and save it as the identifier
+                        val email = resultJson.getString("email")
+                        sessionManager.saveAuthToken(token, email, firstName)
+                        // Do NOT save the Station Operator to the local EVOwner database
+                    }
+
+                    navigateBasedOnRole(role)
+
+                } else {
+                    val errorMessage = resultJson.optString("error", "Invalid credentials.")
+                    showError(errorMessage)
+                }
+            } catch (e: Exception) {
+                showError("An error occurred. Please check your connection.")
+                e.printStackTrace()
+            } finally {
+                showLoading(false)
+            }
+        }
+    }
+    private fun validateLoginForm(): Boolean {
+        val identifier = binding.etEmail.text.toString().trim()
+        val password = binding.etPassword.text.toString()
+
+        if (identifier.isEmpty()) {
+            binding.etEmail.error = "Email or NIC is required"
+            binding.etEmail.requestFocus()
             return false
         }
-
         if (password.isEmpty()) {
             binding.etPassword.error = "Password is required"
+            binding.etPassword.requestFocus()
             return false
         }
-
         return true
     }
 
-    private fun authenticateUser() {
-        val email = binding.etEmail.text.toString().trim()
-        val password = binding.etPassword.text.toString()
-
-        val user = dbHelper.authenticateUser(email, password)
-
-        if (user != null) {
-            // Save user session (you can use SharedPreferences)
-            saveUserSession(user as EVOwner)
-
-            Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
-
-            // Navigate to Dashboard
-            val intent = Intent(this, StationDetailsActivity::class.java)
-            startActivity(intent)
-            finish()
-        } else {
-            Toast.makeText(this, "Invalid email or password", Toast.LENGTH_LONG).show()
-        }
+    private fun showLoading(isLoading: Boolean) {
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.btnLogin.isEnabled = !isLoading
     }
 
-    private fun saveUserSession(user: com.example.evstationmobileapp.models.EVOwner) {
-        val sharedPref = getSharedPreferences("user_session", MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            putString("user_nic", user.nic)
-            putString("user_email", user.email)
-            putString("user_name", "${user.firstName} ${user.lastName}")
-            putBoolean("is_logged_in", true)
-            apply()
+    private fun showError(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun navigateBasedOnRole(role: String) {
+        Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
+
+        val intent = when (role) {
+            "EVOwner" -> {
+                // If the user is an EVOwner, go to the main dashboard
+                Intent(this, MainActivity::class.java)
+            }
+            "StationOperator" -> {
+                // If the user is a StationOperator, go to their specific dashboard
+                // NOTE: You will need to create this 'StationDashboardActivity'
+                Intent(this, StationDashboardActivity::class.java)
+            }
+            else -> {
+                // A fallback in case the role is something unexpected
+                Intent(this, MainActivity::class.java)
+            }
         }
+
+        // Clear the back stack so the user can't go back to the login screen
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 }

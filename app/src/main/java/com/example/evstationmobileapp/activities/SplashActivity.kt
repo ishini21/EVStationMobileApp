@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.example.evstationmobileapp.MainActivity
 import com.example.evstationmobileapp.R
+import com.example.evstationmobileapp.utils.SessionManager
 
 class SplashActivity : AppCompatActivity() {
 
@@ -23,10 +24,14 @@ class SplashActivity : AppCompatActivity() {
     private lateinit var tagline: TextView
     private lateinit var circleBackground1: View
     private lateinit var circleBackground2: View
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Ensure your splash screen layout is named 'splash_screen.xml' or update this line
         setContentView(R.layout.splash_screen)
+
+        sessionManager = SessionManager(this)
 
         // Hide status bar for immersive experience
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -42,10 +47,10 @@ class SplashActivity : AppCompatActivity() {
         // Start animations
         startAnimations()
 
-        // Navigate to main activity after delay
+        // Navigate to the next screen after a delay
         Handler(Looper.getMainLooper()).postDelayed({
-            navigateToMainActivity()
-        }, 3000) // 3 seconds
+            navigateToNextScreen()
+        }, 3000) // 3-second delay
     }
 
     private fun startAnimations() {
@@ -68,13 +73,11 @@ class SplashActivity : AppCompatActivity() {
             repeatCount = ObjectAnimator.INFINITE
             interpolator = AccelerateDecelerateInterpolator()
         }
-
         val scaleXCircle1 = ObjectAnimator.ofFloat(circleBackground1, "scaleX", 1f, 1.2f, 1f).apply {
             duration = 3000
             repeatCount = ObjectAnimator.INFINITE
             interpolator = AccelerateDecelerateInterpolator()
         }
-
         val scaleYCircle1 = ObjectAnimator.ofFloat(circleBackground1, "scaleY", 1f, 1.2f, 1f).apply {
             duration = 3000
             repeatCount = ObjectAnimator.INFINITE
@@ -88,104 +91,57 @@ class SplashActivity : AppCompatActivity() {
             interpolator = AccelerateDecelerateInterpolator()
         }
 
-        val scaleXCircle2 = ObjectAnimator.ofFloat(circleBackground2, "scaleX", 1f, 1.3f, 1f).apply {
-            duration = 4000
-            repeatCount = ObjectAnimator.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
+        // Start all background animations
+        AnimatorSet().apply {
+            playTogether(rotateCircle1, scaleXCircle1, scaleYCircle1, rotateCircle2)
+            start()
         }
-
-        val scaleYCircle2 = ObjectAnimator.ofFloat(circleBackground2, "scaleY", 1f, 1.3f, 1f).apply {
-            duration = 4000
-            repeatCount = ObjectAnimator.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
-        }
-
-        rotateCircle1.start()
-        scaleXCircle1.start()
-        scaleYCircle1.start()
-        rotateCircle2.start()
-        scaleXCircle2.start()
-        scaleYCircle2.start()
     }
 
     private fun animateLogo() {
-        // Initial state
         logoCard.scaleX = 0f
         logoCard.scaleY = 0f
         logoCard.alpha = 0f
 
-        // Scale animation
         val scaleX = ObjectAnimator.ofFloat(logoCard, "scaleX", 0f, 1f).apply {
             duration = 800
             interpolator = OvershootInterpolator()
         }
-
         val scaleY = ObjectAnimator.ofFloat(logoCard, "scaleY", 0f, 1f).apply {
             duration = 800
             interpolator = OvershootInterpolator()
         }
-
         val fadeIn = ObjectAnimator.ofFloat(logoCard, "alpha", 0f, 1f).apply {
             duration = 600
-        }
-
-        // Subtle pulse animation
-        val pulseScaleX = ObjectAnimator.ofFloat(logoCard, "scaleX", 1f, 1.05f, 1f).apply {
-            duration = 1500
-            repeatCount = ObjectAnimator.INFINITE
-            startDelay = 1000
-            interpolator = AccelerateDecelerateInterpolator()
-        }
-
-        val pulseScaleY = ObjectAnimator.ofFloat(logoCard, "scaleY", 1f, 1.05f, 1f).apply {
-            duration = 1500
-            repeatCount = ObjectAnimator.INFINITE
-            startDelay = 1000
-            interpolator = AccelerateDecelerateInterpolator()
         }
 
         AnimatorSet().apply {
             playTogether(scaleX, scaleY, fadeIn)
             start()
-            addListener(object : Animator.AnimatorListener {
-                override fun onAnimationStart(animation: Animator) {}
-                override fun onAnimationEnd(animation: Animator) {
-                    pulseScaleX.start()
-                    pulseScaleY.start()
-                }
-                override fun onAnimationCancel(animation: Animator) {}
-                override fun onAnimationRepeat(animation: Animator) {}
-            })
         }
     }
 
     private fun animateText() {
-        // App name animation
         val fadeInName = ObjectAnimator.ofFloat(appNameText, "alpha", 0f, 1f).apply {
             duration = 600
         }
-
         val slideUpName = ObjectAnimator.ofFloat(appNameText, "translationY", 50f, 0f).apply {
             duration = 600
             interpolator = AccelerateDecelerateInterpolator()
         }
-
         AnimatorSet().apply {
             playTogether(fadeInName, slideUpName)
             start()
         }
 
-        // Tagline animation with slight delay
         Handler(Looper.getMainLooper()).postDelayed({
             val fadeInTagline = ObjectAnimator.ofFloat(tagline, "alpha", 0f, 1f).apply {
                 duration = 600
             }
-
             val slideUpTagline = ObjectAnimator.ofFloat(tagline, "translationY", 30f, 0f).apply {
                 duration = 600
                 interpolator = AccelerateDecelerateInterpolator()
             }
-
             AnimatorSet().apply {
                 playTogether(fadeInTagline, slideUpTagline)
                 start()
@@ -193,13 +149,19 @@ class SplashActivity : AppCompatActivity() {
         }, 200)
     }
 
-    private fun navigateToMainActivity() {
-        val intent = Intent(this, MainActivity::class.java)
+    private fun navigateToNextScreen() {
+        // Use the SessionManager to check the user's login status
+        val intent = if (sessionManager.isLoggedIn()) {
+            // User is logged in, go to MainActivity (Dashboard)
+            Intent(this, MainActivity::class.java)
+        } else {
+            // User is not logged in, go to LoginActivity
+            Intent(this, LoginActivity::class.java)
+        }
+
         startActivity(intent)
-
-        // Fade transition
+        // Add a fade transition for a smooth navigation
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        finish()
+        finish() // Finish SplashActivity so the user can't go back to it
     }
-
 }
