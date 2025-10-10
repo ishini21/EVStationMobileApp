@@ -1,5 +1,6 @@
 package com.example.evstationmobileapp.remote
 
+import com.example.evstationmobileapp.models.CreateEVOwnerDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -17,6 +18,17 @@ object EVOwnerApiService {
     private const val UPDATE_URL = "http://10.0.2.2:5276/api/EVOwners/profile"
     private const val DEACTIVATE_URL = "http://10.0.2.2:5276/api/EVOwners/profile"
 
+
+    suspend fun registerEVOwner(createDto: CreateEVOwnerDto): String {
+        return registerEVOwner(
+            nic = createDto.nic,
+            firstName = createDto.firstName,
+            lastName = createDto.lastName,
+            email = createDto.email,
+            phone = createDto.phone,
+            password = createDto.password
+        )
+    }
 
     suspend fun registerEVOwner(
         nic: String,

@@ -39,7 +39,11 @@ class LoginActivity : AppCompatActivity() {
                 performLogin()
             }
         }
-        // ... your register listener
+        
+        binding.tvRegister.setOnClickListener {
+            val intent = Intent(this, RegistrationActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun performLogin() {
