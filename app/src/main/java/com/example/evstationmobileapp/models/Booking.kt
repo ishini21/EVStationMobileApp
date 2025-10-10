@@ -1,11 +1,15 @@
 package com.example.evstationmobileapp.models
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
 /**
  * This data class represents a single booking object as returned by the backend API.
  * It is used to parse the JSON response into a type-safe Kotlin object.
  */
+
+@Parcelize
 data class Booking(
     @SerializedName("id")
     val id: String,
@@ -19,6 +23,9 @@ data class Booking(
 
     // The current status of the booking (e.g., "Confirmed", "Cancelled")
     @SerializedName("status")
-    val status: String
-)
+    val status: String,
+
+    @SerializedName("qrCode")
+    val qrCode: String? = null
+) : Parcelable
 
