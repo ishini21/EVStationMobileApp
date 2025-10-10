@@ -16,11 +16,12 @@ class SessionManager(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    fun saveAuthToken(token: String, identifier: String, firstName: String) {
+    fun saveAuthToken(token: String, identifier: String, firstName: String , userId: String) {
         with(sharedPreferences.edit()) {
             putString("auth_token", token)
             putString("user_identifier", identifier)
-            putString("first_name", firstName ) // Save the full name
+            putString("first_name", firstName )
+            putString("user_id", userId)// Save the full name
             apply()
         }
     }
@@ -28,7 +29,9 @@ class SessionManager(context: Context) {
     fun fetchUserfirstName(): String? {
         return sharedPreferences.getString("first_name", null)
     }
-
+    fun fetchUserId(): String? {
+        return sharedPreferences.getString("user_id", null)
+    }
     fun fetchAuthToken(): String? {
         return sharedPreferences.getString("auth_token", null)
     }
