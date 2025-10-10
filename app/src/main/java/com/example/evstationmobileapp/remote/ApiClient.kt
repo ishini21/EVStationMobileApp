@@ -13,8 +13,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "http://192.168.1.17:5276/api/"
-//    private const val BASE_URL = "http://10.0.2.2:5276/api/"
+//    private const val BASE_URL = "http://192.168.1.17:5276/api/"
+    private const val BASE_URL = "http://10.0.2.2:5276/api/"
 
 
     private val retrofit: Retrofit by lazy {
@@ -62,10 +62,7 @@ object ApiClient {
                     val errorReader = BufferedReader(InputStreamReader(connection.errorStream))
                     val errorResponse = errorReader.readText()
                     errorReader.close()
-                    result = JSONObject().apply {
-                        put("error", "Login Failed")
-                        put("details", errorResponse)
-                    }.toString()
+                    result = errorResponse
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
