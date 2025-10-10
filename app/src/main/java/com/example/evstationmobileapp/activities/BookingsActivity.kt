@@ -47,8 +47,10 @@ class BookingsActivity : AppCompatActivity() {
         bookingAdapter = BookingAdapter(
             bookings = emptyList(),
             onViewQRClick = { booking ->
-                Toast.makeText(this, "View QR for ${booking.stationName}", Toast.LENGTH_SHORT).show()
-                // TODO: Navigate to a QR code display activity
+                // Navigate to QR code display activity
+                val intent = Intent(this, QRCodeDisplayActivity::class.java)
+                intent.putExtra("booking", booking)
+                startActivity(intent)
             },
             onCancelClick = { booking ->
                 showCancelConfirmationDialog(booking)
@@ -64,16 +66,15 @@ class BookingsActivity : AppCompatActivity() {
 
     private fun fetchUserBookings() {
         val token = sessionManager.fetchAuthToken()
-        val userNic = sessionManager.fetchUserIdentifier()
 
-        if (token.isNullOrEmpty() || userNic.isNullOrEmpty()) {
+        if (token.isNullOrEmpty()) {
             Toast.makeText(this, "Authentication error. Please log in.", Toast.LENGTH_SHORT).show()
             return
         }
 
         lifecycleScope.launch {
             try {
-                val response = ApiClient.apiService.getBookingsByNic("Bearer $token", userNic)
+                val response = ApiClient.apiService.getMyBookings("Bearer $token")
                 if (response.isSuccessful && response.body() != null) {
                     bookingAdapter.updateBookings(response.body()!!.bookings)
                 } else {
@@ -127,4 +128,3 @@ class BookingsActivity : AppCompatActivity() {
         }
     }
 }
-

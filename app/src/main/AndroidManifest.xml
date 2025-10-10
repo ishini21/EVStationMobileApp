@@ -3,8 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus"
+        android:required="false" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -64,7 +67,8 @@
         <activity
             android:name=".activities.BookingsActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            tools:targetApi="26" />
 
         <!-- Stations Activity -->
         <activity
@@ -80,7 +84,20 @@
         <!--New Reservation-->
         <activity
             android:name=".activities.NewReservationActivity"
-            android:exported="false" />
+            android:exported="false"
+            tools:targetApi="26" />
+
+        <!-- QR Code Display Activity -->
+        <activity
+            android:name=".activities.QRCodeDisplayActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <!-- QR Code Scanner Activity -->
+        <activity
+            android:name=".activities.QRCodeScannerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
     </application>
 

@@ -3,6 +3,8 @@ package com.example.evstationmobileapp.remote
 import com.example.evstationmobileapp.models.BookingRequest
 import com.example.evstationmobileapp.models.BookingResponse
 import com.example.evstationmobileapp.models.ChargingStation
+import com.example.evstationmobileapp.models.QRValidationRequest
+import com.example.evstationmobileapp.models.QRValidationResponse
 import com.example.evstationmobileapp.models.Slot
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -40,10 +42,21 @@ interface ApiService {
         @Query("CustomerNic") customerNic: String
     ): Response<BookingResponse>
 
+    @GET("/api/Bookings/my-bookings")
+    suspend fun getMyBookings(
+        @Header("Authorization") token: String
+    ): Response<BookingResponse>
+
     @POST("/api/Bookings/{id}/cancel")
     suspend fun cancelBooking(
         @Header("Authorization") token: String,
         @Path("id") bookingId: String
     ): Response<ResponseBody>
+
+    @POST("/api/Bookings/validateQR")
+    suspend fun validateQRCode(
+        @Header("Authorization") token: String,
+        @Body qrData: QRValidationRequest
+    ): Response<QRValidationResponse>
 
 }
