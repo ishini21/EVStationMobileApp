@@ -268,7 +268,52 @@ object EVOwnerApiService {
     }
 
     /**
-     * Deactivate EV Owner account
+     * Deactivate EV Owner account using the new API endpoint
+     */
+    suspend fun deactivateAccount(nic: String, authToken: String? = null): String {
+        return withContext(Dispatchers.IO) {
+            val url = URL("$BASE_URL/profile/$nic/deactivate")
+            val connection = url.openConnection() as HttpURLConnection
+            var result = ""
+
+            try {
+                connection.requestMethod = "PATCH"
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                if (authToken != null) {
+                    connection.setRequestProperty("Authorization", "Bearer $authToken")
+                }
+                connection.doOutput = true
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_NO_CONTENT || responseCode == HttpURLConnection.HTTP_OK) {
+                    result = JSONObject().apply {
+                        put("success", true)
+                        put("message", "Account deactivated successfully")
+                    }.toString()
+                } else {
+                    val errorReader = BufferedReader(InputStreamReader(connection.errorStream))
+                    val errorResponse = errorReader.readText()
+                    errorReader.close()
+                    result = JSONObject().apply {
+                        put("error", "Deactivation Failed")
+                        put("details", errorResponse)
+                    }.toString()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                result = JSONObject().apply {
+                    put("error", "Exception")
+                    put("message", e.message)
+                }.toString()
+            } finally {
+                connection.disconnect()
+            }
+            result
+        }
+    }
+
+    /**
+     * Deactivate EV Owner account (legacy method for backward compatibility)
      */
     suspend fun deactivateEVOwner(nic: String, authToken: String? = null): String {
         return withContext(Dispatchers.IO) {
