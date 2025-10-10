@@ -57,6 +57,11 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".activities.UpdateProfileActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <!-- station dashboard activity -->
         <activity
             android:name=".activities.StationDashboardActivity"

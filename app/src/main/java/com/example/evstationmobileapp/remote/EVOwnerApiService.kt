@@ -1,6 +1,7 @@
 package com.example.evstationmobileapp.remote
 
 import com.example.evstationmobileapp.models.CreateEVOwnerDto
+import com.example.evstationmobileapp.models.UpdateEVOwnerDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -140,7 +141,66 @@ object EVOwnerApiService {
     }
 
     /**
-     * Update EV Owner profile
+     * Update EV Owner profile using DTO
+     */
+    suspend fun updateEVOwnerProfile(nic: String, updateDto: UpdateEVOwnerDto, authToken: String? = null): String {
+        return withContext(Dispatchers.IO) {
+            val url = URL("$UPDATE_URL/$nic")
+            val connection = url.openConnection() as HttpURLConnection
+            var result = ""
+
+            try {
+                connection.requestMethod = "PUT"
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                if (authToken != null) {
+                    connection.setRequestProperty("Authorization", "Bearer $authToken")
+                }
+                connection.doOutput = true
+
+                val jsonRequestBody = JSONObject().apply {
+                    put("firstName", updateDto.firstName)
+                    put("lastName", updateDto.lastName)
+                    put("email", updateDto.email)
+                    put("phone", updateDto.phone)
+                    if (!updateDto.password.isNullOrEmpty()) {
+                        put("password", updateDto.password)
+                    }
+                }
+
+                val writer = OutputStreamWriter(connection.outputStream)
+                writer.write(jsonRequestBody.toString())
+                writer.flush()
+                writer.close()
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    result = reader.readText()
+                    reader.close()
+                } else {
+                    val errorReader = BufferedReader(InputStreamReader(connection.errorStream))
+                    val errorResponse = errorReader.readText()
+                    errorReader.close()
+                    result = JSONObject().apply {
+                        put("error", "Update Failed")
+                        put("details", errorResponse)
+                    }.toString()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                result = JSONObject().apply {
+                    put("error", "Exception")
+                    put("message", e.message)
+                }.toString()
+            } finally {
+                connection.disconnect()
+            }
+            result
+        }
+    }
+
+    /**
+     * Update EV Owner profile (legacy method for backward compatibility)
      */
     suspend fun updateEVOwner(
         nic: String,
