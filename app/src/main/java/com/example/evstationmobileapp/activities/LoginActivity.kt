@@ -57,11 +57,12 @@ class LoginActivity : AppCompatActivity() {
                     val role = resultJson.getString("role")
                     val firstName = resultJson.getString("firstName")
                     val lastName = resultJson.getString("lastName")
+                    val userId = resultJson.getString("userId")
 
                     if (role == "EVOwner") {
                         // For EV Owners, get the NIC and save it as the identifier
                         val nic = resultJson.getString("nic")
-                        sessionManager.saveAuthToken(token, nic, firstName)
+                        sessionManager.saveAuthToken(token, nic, firstName , userId)
 
                         // Save the full user object to the local database
                         val user = EVOwner(
@@ -78,14 +79,14 @@ class LoginActivity : AppCompatActivity() {
                     } else if (role == "StationOperator") {
                         // For Station Operators, get their email and save it as the identifier
                         val email = resultJson.getString("email")
-                        sessionManager.saveAuthToken(token, email, firstName)
+                        sessionManager.saveAuthToken(token, email, firstName , userId)
                         // Do NOT save the Station Operator to the local EVOwner database
                     }
 
                     navigateBasedOnRole(role)
 
                 } else {
-                    val errorMessage = resultJson.optString("error", "Invalid credentials.")
+                    val errorMessage = resultJson.optString("message", "Invalid credentials.")
                     showError(errorMessage)
                 }
             } catch (e: Exception) {
