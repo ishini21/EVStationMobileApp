@@ -13,6 +13,10 @@ import com.example.evstationmobileapp.utils.SessionManager
 
 class ProfileActivity : AppCompatActivity() {
 
+    companion object {
+        private const val UPDATE_PROFILE_REQUEST_CODE = 1001
+    }
+
     private lateinit var binding: ActivityProfileBinding
     private lateinit var dbHelper: UserDbHelper
     private lateinit var sessionManager: SessionManager
@@ -32,7 +36,13 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.btnUpdate.setOnClickListener {
-            Toast.makeText(this, "Update feature coming soon!", Toast.LENGTH_SHORT).show()
+            try {
+                val intent = Intent(this, UpdateProfileActivity::class.java)
+                startActivityForResult(intent, UPDATE_PROFILE_REQUEST_CODE)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error opening update page: ${e.message}", Toast.LENGTH_LONG).show()
+                e.printStackTrace()
+            }
         }
 
         binding.btnDeactivate.setOnClickListener {
@@ -108,5 +118,17 @@ class ProfileActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (requestCode == UPDATE_PROFILE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                // Profile was updated successfully, reload the data
+                loadUserData()
+                Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

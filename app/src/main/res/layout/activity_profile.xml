@@ -24,7 +24,7 @@
                 android:text="My Profile"
                 android:textSize="28sp"
                 android:textStyle="bold"
-                android:textColor="#1F2937"
+                android:textColor="#10B981"
                 android:layout_centerInParent="true"/>
 
         </RelativeLayout>
@@ -122,7 +122,7 @@
             android:text="Update Profile"
             android:padding="14dp"
             android:layout_marginTop="24dp"
-            android:backgroundTint="#3B82F6"/>
+            android:backgroundTint="#10B981"/>
 
         <Button
             android:id="@+id/btnDeactivate"
@@ -140,9 +140,9 @@
             android:text="Logout"
             android:padding="14dp"
             android:layout_marginTop="24dp"
-            app:strokeColor="#6B7280"
+            app:strokeColor="#1A0000"
             app:strokeWidth="1dp"
-            android:textColor="#6B7280"
+            android:textColor="#1A0000"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
     </LinearLayout>

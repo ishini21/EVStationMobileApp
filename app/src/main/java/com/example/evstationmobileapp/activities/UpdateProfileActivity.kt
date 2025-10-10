@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.evstationmobileapp.databinding.ActivityUpdateProfileBinding
 import com.example.evstationmobileapp.db.UserDbHelper
 import com.example.evstationmobileapp.models.EVOwner
+import com.example.evstationmobileapp.models.UpdateEVOwnerDto
 import com.example.evstationmobileapp.remote.EVOwnerApiService
 import com.example.evstationmobileapp.utils.SessionManager
 import kotlinx.coroutines.launch
@@ -168,8 +169,17 @@ class UpdateProfileActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                val resultJsonString = EVOwnerApiService.updateEVOwner(
-                    nic, firstName, lastName, email, phone, null, authToken
+                // Create DTO for API call
+                val updateDto = UpdateEVOwnerDto(
+                    firstName = firstName,
+                    lastName = lastName,
+                    email = email,
+                    phone = phone,
+                    password = null // No password update for now
+                )
+                
+                val resultJsonString = EVOwnerApiService.updateEVOwnerProfile(
+                    nic, updateDto, authToken
                 )
                 println("UpdateProfileActivity: Update response = $resultJsonString")
                 val resultJson = JSONObject(resultJsonString)
