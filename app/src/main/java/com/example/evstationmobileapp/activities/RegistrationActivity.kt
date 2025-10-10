@@ -1,10 +1,16 @@
 package com.example.evstationmobileapp.activities
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.evstationmobileapp.databinding.ActivityRegistrationBinding
 import com.example.evstationmobileapp.db.UserDbHelper
+import com.example.evstationmobileapp.models.CreateEVOwnerDto
 import com.example.evstationmobileapp.models.EVOwner
+import com.example.evstationmobileapp.remote.EVOwnerApiService
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.regex.Pattern
 
 class RegistrationActivity : AppCompatActivity() {
@@ -109,32 +115,68 @@ class RegistrationActivity : AppCompatActivity() {
         val phone = binding.etPhone.text.toString().trim()
         val password = binding.etPassword.text.toString()
 
-        // Check if user already exists with same NIC
+        // Check if user already exists with same NIC locally
         if (dbHelper.getUserByNIC(nic) != null) {
             Toast.makeText(this, "User with this NIC already exists", Toast.LENGTH_LONG).show()
             return
         }
 
-        // Check if email already exists
+        // Check if email already exists locally
         if (dbHelper.isEmailExists(email)) {
             Toast.makeText(this, "Email already registered", Toast.LENGTH_LONG).show()
             return
         }
 
-        val newUser = EVOwner(
-            nic = nic,
-            firstName = firstName,
-            lastName = lastName,
-            email = email,
-            phone = phone,
-            password = password
-        )
+        showLoading(true)
 
-        if (dbHelper.createUser(newUser)) {
-            Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
-            finish() // Go back to login
-        } else {
-            Toast.makeText(this, "Registration failed. Please try again.", Toast.LENGTH_LONG).show()
+        lifecycleScope.launch {
+            try {
+                // Create DTO for API call
+                val createDto = CreateEVOwnerDto(
+                    nic = nic,
+                    firstName = firstName,
+                    lastName = lastName,
+                    email = email,
+                    phone = phone,
+                    password = password
+                )
+                
+                // Call the API to register the user
+                val resultJsonString = EVOwnerApiService.registerEVOwner(createDto)
+                
+                val resultJson = JSONObject(resultJsonString)
+
+                if (resultJson.has("nic") || resultJson.has("id")) {
+                    // Registration successful on server
+                    val newUser = EVOwner(
+                        nic = nic,
+                        firstName = firstName,
+                        lastName = lastName,
+                        email = email,
+                        phone = phone,
+                        password = password,
+                        isActive = true
+                    )
+
+                    // Save to local database
+                    if (dbHelper.createUser(newUser)) {
+                        Toast.makeText(this@RegistrationActivity, "Registration successful!", Toast.LENGTH_SHORT).show()
+                        finish() // Go back to login
+                    } else {
+                        Toast.makeText(this@RegistrationActivity, "Registration successful but failed to save locally. Please login.", Toast.LENGTH_LONG).show()
+                        finish()
+                    }
+                } else {
+                    // Registration failed on server
+                    val errorMessage = resultJson.optString("message", "Registration failed. Please try again.")
+                    Toast.makeText(this@RegistrationActivity, errorMessage, Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@RegistrationActivity, "Network error. Please check your connection and try again.", Toast.LENGTH_LONG).show()
+                e.printStackTrace()
+            } finally {
+                showLoading(false)
+            }
         }
     }
 
@@ -148,5 +190,11 @@ class RegistrationActivity : AppCompatActivity() {
     private fun isValidPhone(phone: String): Boolean {
         val phonePattern = Pattern.compile("^[0-9+\\-\\s()]{10,}\$")
         return phonePattern.matcher(phone).matches()
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        binding.btnRegister.isEnabled = !isLoading
+        // You can add a progress bar to the registration layout if needed
+        // binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 }
