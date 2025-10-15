@@ -32,6 +32,11 @@ class SessionManager(context: Context) {
     fun fetchUserId(): String? {
         return sharedPreferences.getString("user_id", null)
     }
+    
+    fun getUserId(): String? {
+        return fetchUserId()
+    }
+    
     fun fetchAuthToken(): String? {
         return sharedPreferences.getString("auth_token", null)
     }
