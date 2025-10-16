@@ -86,6 +86,12 @@
             android:name=".activities.StationDetailsActivity"
             android:exported="false" />
 
+        <!-- Operator Station Details Activity -->
+        <activity
+            android:name=".activities.OperatorStationDetailsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <!--New Reservation-->
         <activity
             android:name=".activities.NewReservationActivity"
