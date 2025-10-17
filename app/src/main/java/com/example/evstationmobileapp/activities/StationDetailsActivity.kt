@@ -129,7 +129,8 @@ class StationDetailsActivity : AppCompatActivity() {
     private fun openInMap(station: ChargingStation) {
         val lat = station.location.latitude
         val long = station.location.longitude
-        val gmmIntentUri = Uri.parse("geo:$lat,$long?q=${Uri.encode(station.stationName)}")
+        val label = Uri.encode(station.stationName)
+        val gmmIntentUri = Uri.parse("geo:0,0?q=$lat,$long($label)")
         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
         mapIntent.setPackage("com.google.android.apps.maps")
         startActivity(mapIntent)
